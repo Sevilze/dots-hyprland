@@ -177,6 +177,10 @@ Singleton {
                     property bool enableSidebar: true
                     property real clockFactor: 1.13
                 }
+                property JsonObject multiMonitor: JsonObject {
+                    property bool enable: false
+                }
+                property list<var> wallpapersByMonitor: []
             }
 
             property JsonObject bar: JsonObject {
@@ -409,11 +413,11 @@ Singleton {
                 }
                 property bool secondPrecision: false
             }
-            
+
             property JsonObject wallpaperSelector: JsonObject {
                 property bool useSystemFileDialog: false
             }
-            
+
             property JsonObject windows: JsonObject {
                 property bool showTitlebar: true // Client-side decoration for shell apps
                 property bool centerTitle: true
