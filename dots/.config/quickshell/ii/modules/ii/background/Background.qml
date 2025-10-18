@@ -44,6 +44,10 @@ Variants {
         property bool hasPerMonitorWallpaper: WallpaperListener.effectivePerMonitor[monitor.name] !== undefined
         property int wallpaperFirstWorkspace: hasPerMonitorWallpaper ? (wallpaperData.workspaceFirst ?? 1) : 1
         property int wallpaperLastWorkspace: hasPerMonitorWallpaper ? (wallpaperData.workspaceLast ?? 10) : 10
+        property var wallpaperData: WallpaperListener.effectivePerMonitor[monitor.name] || { path: Config.options.background.wallpaperPath, workspaceFirst: 1, workspaceLast: 10 }
+        property string resolvedPath: wallpaperData.path || Config.options.background.wallpaperPath
+        property int wallpaperFirstWorkspace: wallpaperData.workspaceFirst || 1
+        property int wallpaperLastWorkspace: wallpaperData.workspaceLast || 10
         property bool wallpaperIsVideo: resolvedPath.endsWith(".mp4") || resolvedPath.endsWith(".webm") || resolvedPath.endsWith(".mkv") || resolvedPath.endsWith(".avi") || resolvedPath.endsWith(".mov")
         // Get per-monitor thumbnail if available, otherwise use global thumbnail
         property string thumbnailPath: {
@@ -209,12 +213,11 @@ Variants {
                     (wallpaperData.workspaceFirst !== undefined && wallpaperData.workspaceLast !== undefined)
                 property int chunkSize: usePerMonitorRange ? bgRoot.wallpaperLastWorkspace - bgRoot.wallpaperFirstWorkspace + 1 : 
                     Config?.options.bar.workspaces.shown ?? 10
-                // Use wallpaper's configured workspace range when in per-monitor mode, otherwise use dynamic range
                 property int lower: usePerMonitorRange ?
-                    bgRoot.wallpaperFirstWorkspace :
+                    Math.floor(bgRoot.wallpaperFirstWorkspace / chunkSize) * chunkSize :
                     Math.floor(bgRoot.firstWorkspaceId / chunkSize) * chunkSize
                 property int upper: usePerMonitorRange ?
-                    bgRoot.wallpaperLastWorkspace :
+                    Math.ceil(bgRoot.wallpaperLastWorkspace / chunkSize) * chunkSize :
                     Math.ceil(bgRoot.lastWorkspaceId / chunkSize) * chunkSize
                 property int range: upper - lower
                 property real valueX: {
