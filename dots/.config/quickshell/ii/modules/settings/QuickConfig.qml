@@ -112,7 +112,15 @@ ContentPage {
                     sourceSize.width: parent.implicitWidth
                     sourceSize.height: parent.implicitHeight
                     fillMode: Image.PreserveAspectCrop
-                    source: parent.getThumbnailPath(parent.wallpaperPath, currentScreenName)
+                    source: {
+                        // Show appropriate wallpaper based on mode and monitor
+                        if (Config.options.background.multiMonitor.enable) {
+                            const wallpaperData = WallpaperListener.effectivePerMonitor[currentScreenName]
+                            return wallpaperData?.path
+                        } else {
+                            return Config.options.background.wallpaperPath
+                        }
+                    }
                     cache: false
                     layer.enabled: true
                     layer.effect: OpacityMask {
