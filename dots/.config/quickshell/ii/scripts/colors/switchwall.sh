@@ -334,13 +334,6 @@ main() {
     set_accent_color_in_config() {
         jq --arg c "$1" '.appearance.palette.accentColor = $c' "$SHELL_CONFIG_FILE" > "$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
     }
-    get_accent_color_from_config() {
-        jq -r '.appearance.palette.accentColor' "$SHELL_CONFIG_FILE" 2>/dev/null || echo ""
-    }
-    set_accent_color() {
-        local color="$1"
-        jq --arg color "$color" '.appearance.palette.accentColor = $color' "$SHELL_CONFIG_FILE" > "$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
-    }
 
     detect_scheme_type_from_image() {
         local img="$1"
@@ -405,13 +398,10 @@ main() {
                 ;;
             --color)
                 if [[ "$2" =~ ^#?[A-Fa-f0-9]{6}$ ]]; then
-                    set_accent_color "$2"
-                    shift 2
-                elif [[ "$2" == "clear" ]]; then
-                    set_accent_color ""
+                    set_accent_color_in_config "$2"
                     shift 2
                 else
-                    set_accent_color $(hyprpicker --no-fancy)
+                    set_accent_color_in_config $(hyprpicker --no-fancy)
                     shift
                 fi
                 ;;
@@ -449,11 +439,6 @@ main() {
         esac
     done
 
-    # Detect workspace range based on hyprctl workspacerules
-    if [[ -n "$target_monitor" && ( -z "$start_workspace" || -z "$end_workspace" ) ]]; then
-        read start_workspace end_workspace < <(detect_monitor_workspace_range "$target_monitor")
-    fi
-
     # If accentColor is set in config, use it
     config_color="$(get_accent_color_from_config)"
     if [[ "$config_color" =~ ^#?[A-Fa-f0-9]{6}$ ]]; then
@@ -461,14 +446,14 @@ main() {
         color="$config_color"
     fi
 
-    # Detect workspace range based on hyprctl workspacerules
-    if [[ -n "$target_monitor" && ( -z "$start_workspace" || -z "$end_workspace" ) ]]; then
-        read start_workspace end_workspace < <(detect_monitor_workspace_range "$target_monitor")
-    fi
-    
     # If type_flag is not set, get it from config
     if [[ -z "$type_flag" ]]; then
         type_flag="$(get_type_from_config)"
+    fi
+
+    # Detect workspace range based on hyprctl workspacerules
+    if [[ -n "$target_monitor" && ( -z "$start_workspace" || -z "$end_workspace" ) ]]; then
+        read start_workspace end_workspace < <(detect_monitor_workspace_range "$target_monitor")
     fi
 
     # Validate type_flag (allow 'auto' as well)
