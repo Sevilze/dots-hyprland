@@ -433,11 +433,18 @@ main() {
         color="$config_color"
     fi
 
+    # If accentColor is set in config, use it
+    config_color="$(get_accent_color_from_config)"
+    if [[ "$config_color" =~ ^#?[A-Fa-f0-9]{6}$ ]]; then
+        color_flag="1"
+        color="$config_color"
+    fi
+
     # Detect workspace range based on hyprctl workspacerules
     if [[ -n "$target_monitor" && ( -z "$start_workspace" || -z "$end_workspace" ) ]]; then
         read start_workspace end_workspace < <(detect_monitor_workspace_range "$target_monitor")
     fi
-
+    
     # If type_flag is not set, get it from config
     if [[ -z "$type_flag" ]]; then
         type_flag="$(get_type_from_config)"
