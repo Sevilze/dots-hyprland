@@ -279,6 +279,7 @@ PanelWindow {
         const uploadAndGetUrl = (filePath) => {
             return `curl -sF files[]=@'${StringUtils.shellSingleQuoteEscape(filePath)}' ${root.fileUploadApiEndpoint} | jq -r '.files[0].url'`
         }
+        const annotationCommand = `${Config.options.regionSelector.annotation.useSatty ? "satty" : "swappy"} -f -`;
         switch (root.action) {
             case RegionSelection.SnipAction.Copy:
                 if (saveScreenshotDir === "") {
