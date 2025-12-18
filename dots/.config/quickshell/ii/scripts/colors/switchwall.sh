@@ -216,7 +216,7 @@ switch() {
                 exit 0
             fi
 
-            # Set wallpaper path
+            # Set wallpaper path (QML VideoWallpaper will handle playback)
             set_wallpaper_path "$imgpath" "$target_monitor" "$start_workspace" "$end_workspace"
 
             # Extract first frame for color generation (per-monitor or global)
