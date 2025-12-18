@@ -70,21 +70,49 @@ ContentPage {
                 implicitWidth: 340
                 implicitHeight: 200
 
+                // Helper function to check if path is a video
+                function isVideo(path) {
+                    if (!path) return false;
+                    const ext = path.split('.').pop().toLowerCase();
+                    return ['mp4', 'webm', 'mkv', 'avi', 'mov'].indexOf(ext) !== -1;
+                }
+
+                function getThumbnailPath(wallpaperPath, monitorName) {
+                    if (!isVideo(wallpaperPath)) {
+                        return wallpaperPath;
+                    }
+                    
+                    // For videos, use the thumbnail
+                    if (Config.options.background.multiMonitor.enable && monitorName) {
+                        // Check for per-monitor thumbnail
+                        const thumbnailsByMonitor = Config.options.background?.thumbnailsByMonitor || [];
+                        for (let i = 0; i < thumbnailsByMonitor.length; i++) {
+                            if (thumbnailsByMonitor[i].monitor === monitorName) {
+                                return thumbnailsByMonitor[i].path;
+                            }
+                        }
+                    }
+                    // Fall back to global thumbnail
+                    return Config.options.background.thumbnailPath || "";
+                }
+
+                property string wallpaperPath: {
+                    // Show appropriate wallpaper based on mode and monitor
+                    if (Config.options.background.multiMonitor.enable) {
+                        const wallpaperData = WallpaperListener.effectivePerMonitor[currentScreenName]
+                        return wallpaperData?.path || ""
+                    } else {
+                        return Config.options.background.wallpaperPath || ""
+                    }
+                }
+
                 StyledImage {
                     id: wallpaperPreview
                     anchors.fill: parent
                     sourceSize.width: parent.implicitWidth
                     sourceSize.height: parent.implicitHeight
                     fillMode: Image.PreserveAspectCrop
-                    source: {
-                        // Show appropriate wallpaper based on mode and monitor
-                        if (Config.options.background.multiMonitor.enable) {
-                            const wallpaperData = WallpaperListener.effectivePerMonitor[currentScreenName]
-                            return wallpaperData?.path
-                        } else {
-                            return Config.options.background.wallpaperPath
-                        }
-                    }
+                    source: parent.getThumbnailPath(parent.wallpaperPath, currentScreenName)
                     cache: false
                     layer.enabled: true
                     layer.effect: OpacityMask {

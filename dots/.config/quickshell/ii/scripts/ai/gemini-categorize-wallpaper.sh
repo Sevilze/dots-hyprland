@@ -13,9 +13,33 @@ WALLPAPER_NAME="$(basename "$SOURCE_IMG_PATH")"
 PROMPT="${3:-${GEMINI_WALLPAPER_PROMPT:-Categorize the wallpaper. Its file name is $WALLPAPER_NAME}}"
 RESIZED_IMG_PATH="/tmp/quickshell/ai/wallpaper.jpg"
 
+# Check if source is a video file
+IS_VIDEO=false
+case "${SOURCE_IMG_PATH,,}" in
+    *.mp4|*.webm|*.mkv|*.avi|*.mov)
+        IS_VIDEO=true
+        ;;
+esac
+
 # Resize image for speed
+# For videos, we need to extract a frame first, otherwise magick will spawn a persistent ffmpeg
 mkdir -p "$(dirname "$RESIZED_IMG_PATH")"
-magick "$SOURCE_IMG_PATH" -resize 200x -quality 50 "$RESIZED_IMG_PATH"
+if [ "$IS_VIDEO" = true ]; then
+    # Extract first frame from video using ffmpeg with timeout
+    timeout 10s ffmpeg -y -hwaccel auto -ss 1 -i "$SOURCE_IMG_PATH" -vframes 1 -update 1 \
+        -vf "scale=200:200:force_original_aspect_ratio=decrease" "$RESIZED_IMG_PATH" >/dev/null 2>&1 || \
+    # Fallback without seeking if first attempt fails
+    timeout 10s ffmpeg -y -hwaccel auto -i "$SOURCE_IMG_PATH" -vframes 1 -update 1 \
+        -vf "scale=200:200:force_original_aspect_ratio=decrease" "$RESIZED_IMG_PATH" >/dev/null 2>&1
+    
+    if [ ! -f "$RESIZED_IMG_PATH" ] || [ ! -s "$RESIZED_IMG_PATH" ]; then
+        echo "Error: Failed to extract frame from video"
+        exit 1
+    fi
+else
+    # For images, use magick as before
+    magick "$SOURCE_IMG_PATH" -resize 200x -quality 50 "$RESIZED_IMG_PATH"
+fi
 
 # Get API key
 API_KEY=$(secret-tool lookup 'application' 'illogical-impulse' | jq -r '.apiKeys.gemini')

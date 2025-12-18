@@ -217,6 +217,7 @@ Singleton {
                     property bool enable: false
                 }
                 property list<var> wallpapersByMonitor: []
+                property list<var> thumbnailsByMonitor: []
             }
 
             property JsonObject bar: JsonObject {

@@ -111,6 +111,14 @@ ApiStrategy {
                 return ({})
             }
 
+            // Handle API errors
+            if (dataJson.error) {
+                const errorMsg = `**API Error ${dataJson.error.code}**: ${dataJson.error.message}`;
+                message.rawContent += errorMsg;
+                message.content += errorMsg;
+                return { finished: true };
+            }
+
             // No candidates?
             if (!dataJson.candidates) return {};
             
@@ -130,10 +138,16 @@ ApiStrategy {
                 return { functionCall: { name: functionCall.name, args: functionCall.args }, finished: finished };
             }
 
-            // Normal text response
-            const responseContent = dataJson.candidates[0]?.content?.parts[0]?.text
-            message.rawContent += responseContent;
-            message.content += responseContent;
+            // Normal text response - handle Gemini 3 models with thoughtSignature
+            const parts = dataJson.candidates[0]?.content?.parts ?? [];
+            for (const part of parts) {
+                if (part.thoughtSignature) continue;
+                const responseContent = part.text ?? "";
+                if (responseContent.length > 0) {
+                    message.rawContent += responseContent;
+                    message.content += responseContent;
+                }
+            }
             
             // Handle annotations and metadata
             const annotationSources = dataJson.candidates[0]?.groundingMetadata?.groundingChunks?.map(chunk => {

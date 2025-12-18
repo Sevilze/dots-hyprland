@@ -40,10 +40,26 @@ Variants {
         // Wallpaper
         property var wallpaperData: WallpaperListener.effectivePerMonitor[monitor.name] || { path: Config.options.background.wallpaperPath, workspaceFirst: 1, workspaceLast: 10 }
         property string resolvedPath: wallpaperData.path || Config.options.background.wallpaperPath
-        property int wallpaperFirstWorkspace: wallpaperData.workspaceFirst || 1
-        property int wallpaperLastWorkspace: wallpaperData.workspaceLast || 10
+        // Only use wallpaperData workspace range if it actually exists in effectivePerMonitor, otherwise use defaults
+        property bool hasPerMonitorWallpaper: WallpaperListener.effectivePerMonitor[monitor.name] !== undefined
+        property int wallpaperFirstWorkspace: hasPerMonitorWallpaper ? (wallpaperData.workspaceFirst ?? 1) : 1
+        property int wallpaperLastWorkspace: hasPerMonitorWallpaper ? (wallpaperData.workspaceLast ?? 10) : 10
         property bool wallpaperIsVideo: resolvedPath.endsWith(".mp4") || resolvedPath.endsWith(".webm") || resolvedPath.endsWith(".mkv") || resolvedPath.endsWith(".avi") || resolvedPath.endsWith(".mov")
-        property string wallpaperPath: wallpaperIsVideo ? Config.options.background.thumbnailPath : resolvedPath
+        // Get per-monitor thumbnail if available, otherwise use global thumbnail
+        property string thumbnailPath: {
+            if (!wallpaperIsVideo) return resolvedPath;
+            const thumbnailsByMonitor = Config.options.background?.thumbnailsByMonitor || [];
+            for (let i = 0; i < thumbnailsByMonitor.length; i++) {
+                if (thumbnailsByMonitor[i].monitor === monitor.name) {
+                    return thumbnailsByMonitor[i].path;
+                }
+            }
+            // For videos, NEVER fall back to the video file itself
+            // Return the global thumbnail path if set, otherwise empty string
+            // This prevents magick from trying to process video files
+            return Config.options.background.thumbnailPath || "";
+        }
+        property string wallpaperPath: wallpaperIsVideo ? thumbnailPath : resolvedPath
         property bool wallpaperSafetyTriggered: {
             const enabled = Config.options.workSafety.enable.wallpaper;
             const sensitiveWallpaper = (CF.StringUtils.stringListContainsSubstring(wallpaperPath.toLowerCase(), Config.options.workSafety.triggerCondition.fileKeywords));
@@ -99,12 +115,18 @@ Variants {
 
         // Wallpaper zoom scale
         function updateZoomScale() {
-            getWallpaperSizeProc.path = bgRoot.wallpaperPath;
+            // Don't run if wallpaperPath is empty (video thumbnail not ready yet)
+            if (!bgRoot.wallpaperPath || bgRoot.wallpaperPath.length === 0) {
+                console.log("[Background] Waiting for video thumbnail to be created...");
+                return;
+            }
+            // Use thumbnail path for videos to avoid spawning persistent ffmpeg
+            getWallpaperSizeProc.path = bgRoot.wallpaperPath; // wallpaperPath already handles video vs image
             getWallpaperSizeProc.running = true;
         }
         Process {
             id: getWallpaperSizeProc
-            property string path: bgRoot.wallpaperPath
+            property string path: bgRoot.wallpaperPath // wallpaperPath already handles video vs image
             command: ["magick", "identify", "-format", "%w %h", path]
             stdout: StdioCollector {
                 id: wallpaperSizeOutputCollector
@@ -126,6 +148,51 @@ Variants {
             }
         }
 
+        // Clock positioning
+        function updateClockPosition() {
+            // Don't run if wallpaperPath is empty (video thumbnail not ready yet)
+            if (!bgRoot.wallpaperPath || bgRoot.wallpaperPath.length === 0) {
+                // Set default center position for videos without thumbnails yet
+                bgRoot.clockX = bgRoot.screen.width / 2;
+                bgRoot.clockY = bgRoot.screen.height / 2;
+                return;
+            }
+            // Somehow all this manual setting is needed to make the proc correctly use the new values
+            // Use thumbnail path for videos to avoid spawning persistent ffmpeg
+            leastBusyRegionProc.path = bgRoot.wallpaperPath; // wallpaperPath already handles video vs image
+            leastBusyRegionProc.contentWidth = clockLoader.implicitWidth + root.clockSizePadding * 2;
+            leastBusyRegionProc.contentHeight = clockLoader.implicitHeight + root.clockSizePadding * 2;
+            leastBusyRegionProc.horizontalPadding = bgRoot.movableXSpace + root.screenSizePadding * 2;
+            leastBusyRegionProc.verticalPadding = bgRoot.movableYSpace + root.screenSizePadding * 2;
+            leastBusyRegionProc.running = false;
+            leastBusyRegionProc.running = true;
+        }
+        Process {
+            id: leastBusyRegionProc
+            property string path: bgRoot.wallpaperPath
+            property int contentWidth: 300
+            property int contentHeight: 300
+            property int horizontalPadding: bgRoot.movableXSpace
+            property int verticalPadding: bgRoot.movableYSpace
+            command: [Quickshell.shellPath("scripts/images/least-busy-region-venv.sh"), "--screen-width", Math.round(bgRoot.screen.width / bgRoot.effectiveWallpaperScale), "--screen-height", Math.round(bgRoot.screen.height / bgRoot.effectiveWallpaperScale), "--width", contentWidth, "--height", contentHeight, "--horizontal-padding", horizontalPadding, "--vertical-padding", verticalPadding, path
+                // "--visual-output",
+                ,]
+            stdout: StdioCollector {
+                id: leastBusyRegionOutputCollector
+                onStreamFinished: {
+                    const output = leastBusyRegionOutputCollector.text;
+                    // console.log("[Background] Least busy region output:", output)
+                    if (output.length === 0)
+                        return;
+                    const parsedContent = JSON.parse(output);
+                    bgRoot.clockX = parsedContent.center_x * bgRoot.effectiveWallpaperScale;
+                    bgRoot.clockY = parsedContent.center_y * bgRoot.effectiveWallpaperScale;
+                    bgRoot.dominantColor = parsedContent.dominant_color || Appearance.colors.colPrimary;
+                }
+            }
+        }
+
+        // Wallpaper
         Item {
             anchors.fill: parent
             clip: true
@@ -142,17 +209,18 @@ Variants {
                     (wallpaperData.workspaceFirst !== undefined && wallpaperData.workspaceLast !== undefined)
                 property int chunkSize: usePerMonitorRange ? bgRoot.wallpaperLastWorkspace - bgRoot.wallpaperFirstWorkspace + 1 : 
                     Config?.options.bar.workspaces.shown ?? 10
+                // Use wallpaper's configured workspace range when in per-monitor mode, otherwise use dynamic range
                 property int lower: usePerMonitorRange ?
-                    Math.floor(bgRoot.wallpaperFirstWorkspace / chunkSize) * chunkSize :
+                    bgRoot.wallpaperFirstWorkspace :
                     Math.floor(bgRoot.firstWorkspaceId / chunkSize) * chunkSize
                 property int upper: usePerMonitorRange ?
-                    Math.ceil(bgRoot.wallpaperLastWorkspace / chunkSize) * chunkSize :
+                    bgRoot.wallpaperLastWorkspace :
                     Math.ceil(bgRoot.lastWorkspaceId / chunkSize) * chunkSize
                 property int range: upper - lower
                 property real valueX: {
                     let result = 0.5;
                     if (Config.options.background.parallax.enableWorkspace && !bgRoot.verticalParallax) {
-                        result = ((bgRoot.monitor.activeWorkspace?.id - lower) / range);
+                        result = range > 0 ? ((bgRoot.monitor.activeWorkspace?.id - lower) / range) : 0.5;
                     }
                     if (Config.options.background.parallax.enableSidebar) {
                         result += (0.15 * GlobalStates.sidebarRightOpen - 0.15 * GlobalStates.sidebarLeftOpen);
@@ -162,9 +230,13 @@ Variants {
                 property real valueY: {
                     let result = 0.5;
                     if (Config.options.background.parallax.enableWorkspace && bgRoot.verticalParallax) {
-                        result = ((bgRoot.monitor.activeWorkspace?.id - lower) / range);
+                        result = range > 0 ? ((bgRoot.monitor.activeWorkspace?.id - lower) / range) : 0.5;
                     }
                     return result;
+                }
+
+                onValueXChanged: {
+                    console.log("[Background] Wallpaper valueX changed:", valueX, "workspace:", bgRoot.monitor.activeWorkspace?.id, "range:", lower, "-", upper)
                 }
                 property real effectiveValueX: Math.max(0, Math.min(1, valueX))
                 property real effectiveValueY: Math.max(0, Math.min(1, valueY))
@@ -190,6 +262,60 @@ Variants {
                 }
                 width: bgRoot.wallpaperWidth / bgRoot.wallpaperToScreenRatio * bgRoot.effectiveWallpaperScale
                 height: bgRoot.wallpaperHeight / bgRoot.wallpaperToScreenRatio * bgRoot.effectiveWallpaperScale
+            }
+
+            // Video wallpaper with animated parallax (QtMultimedia approach)
+            Loader {
+                id: videoWallpaperLoader
+                active: bgRoot.wallpaperIsVideo && bgRoot.visible
+                anchors.fill: parent
+                
+                sourceComponent: VideoWallpaper {
+                    // Source
+                    source: bgRoot.resolvedPath
+                    
+                    // Dimensions
+                    videoWidth: bgRoot.wallpaperWidth
+                    videoHeight: bgRoot.wallpaperHeight
+                    screenWidth: bgRoot.screen.width
+                    screenHeight: bgRoot.screen.height
+                    effectiveScale: bgRoot.effectiveWallpaperScale
+                    videoToScreenRatio: bgRoot.wallpaperToScreenRatio
+                    
+                    // Parallax values (same calculation as image parallax)
+                    // Use per-monitor workspace range if multiMonitor is enabled, otherwise use dynamic global range
+                    property bool usePerMonitorRange: WallpaperListener.multiMonitorEnabled &&
+                        (wallpaperData.workspaceFirst !== undefined && wallpaperData.workspaceLast !== undefined)
+                    property int chunkSize: usePerMonitorRange ? bgRoot.wallpaperLastWorkspace - bgRoot.wallpaperFirstWorkspace + 1 : 
+                        Config?.options.bar.workspaces.shown ?? 10
+                    // Use wallpaper's configured workspace range when in per-monitor mode, otherwise use dynamic range
+                    property int lower: usePerMonitorRange ?
+                        bgRoot.wallpaperFirstWorkspace :
+                        Math.floor(bgRoot.firstWorkspaceId / chunkSize) * chunkSize
+                    property int upper: usePerMonitorRange ?
+                        bgRoot.wallpaperLastWorkspace :
+                        Math.ceil(bgRoot.lastWorkspaceId / chunkSize) * chunkSize
+                    property int range: upper - lower
+                    
+                    valueX: {
+                        let result = 0.5;
+                        if (Config.options.background.parallax.enableWorkspace && !bgRoot.verticalParallax) {
+                            result = range > 0 ? ((bgRoot.monitor.activeWorkspace?.id - lower) / range) : 0.5;
+                        }
+                        if (Config.options.background.parallax.enableSidebar) {
+                            result += (0.15 * GlobalStates.sidebarRightOpen - 0.15 * GlobalStates.sidebarLeftOpen);
+                        }
+                        return result;
+                    }
+                    
+                    valueY: {
+                        let result = 0.5;
+                        if (Config.options.background.parallax.enableWorkspace && bgRoot.verticalParallax) {
+                            result = range > 0 ? ((bgRoot.monitor.activeWorkspace?.id - lower) / range) : 0.5;
+                        }
+                        return result;
+                    }
+                }
             }
 
             Loader {

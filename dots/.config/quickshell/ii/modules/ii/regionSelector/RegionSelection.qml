@@ -282,7 +282,19 @@ PanelWindow {
 
                 break;
             case RegionSelection.SnipAction.Edit:
-                snipProc.command = ["bash", "-c", `${cropToStdout} | swappy -f - && ${cleanup}`]
+                if (saveScreenshotDir === "") {
+                    snipProc.command = ["bash", "-c", `${cropToStdout} | swappy -f - && ${cleanup}`]
+                } else {
+                    const editSavePathBase = root.saveScreenshotDir
+                    snipProc.command = [
+                        "bash", "-c",
+                        `mkdir -p '${StringUtils.shellSingleQuoteEscape(editSavePathBase)}' && \
+                        saveFileName="screenshot-$(date '+%Y-%m-%d_%H.%M.%S').png" && \
+                        savePath="${editSavePathBase}/$saveFileName" && \
+                        ${cropToStdout} | tee >(cat > "$savePath") | swappy -f - && \
+                        ${cleanup}`
+                    ]
+                }
                 break;
             case RegionSelection.SnipAction.Search:
                 snipProc.command = ["bash", "-c", `${cropInPlace} && xdg-open "${root.imageSearchEngineBaseUrl}$(${uploadAndGetUrl(root.screenshotPath)})" && ${cleanup}`]

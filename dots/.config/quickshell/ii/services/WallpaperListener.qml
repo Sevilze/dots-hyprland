@@ -47,9 +47,9 @@ Singleton {
             const entry = byMonitorList[i]
             if (entry && entry.monitor && entry.path) {
                 const data = { path: entry.path }
-                if (entry.startWorkspace !== undefined && entry.endWorkspace !== undefined) {
-                    data.startWorkspace = entry.startWorkspace
-                    data.endWorkspace = entry.endWorkspace
+                if (entry.workspaceFirst !== undefined && entry.workspaceLast !== undefined) {
+                    data.workspaceFirst = entry.workspaceFirst
+                    data.workspaceLast = entry.workspaceLast
                 }
 
                 byMonitorMap[entry.monitor] = data

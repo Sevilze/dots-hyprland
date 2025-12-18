@@ -47,12 +47,7 @@ generate_thumbnail() {
     local src="$1"
     local abs_path
     abs_path="$(realpath "$src")"
-    # Skip files with multiple frames (GIFs, videos, etc.)
-    case "${abs_path,,}" in
-        *.gif|*.mp4|*.webm|*.mkv|*.avi|*.mov)
-            return
-            ;;
-    esac
+    
     local encoded_path
     encoded_path="$(urlencode "$abs_path")"
     local uri
@@ -64,7 +59,44 @@ generate_thumbnail() {
     if [ -f "$out" ]; then
         return
     fi
-    magick "$abs_path" -resize "${THUMBNAIL_SIZE}x${THUMBNAIL_SIZE}" "$out"
+    
+    # Check if it's a video file
+    case "${abs_path,,}" in
+        *.mp4|*.webm|*.mkv|*.avi|*.mov)
+            # Use ffmpeg to extract first frame for video files
+            if command -v ffmpeg &>/dev/null; then
+                # Use hwaccel and aggressive timeout to prevent hanging
+                # -hwaccel auto: try hardware decode
+                # -ss 1: seek to 1 second (skip black intros)
+                # -update 1: required for single image output
+                # Redirect both stdout and stderr to suppress verbose output
+                timeout 10s ffmpeg -y -hwaccel auto -ss 1 -i "$abs_path" -vframes 1 -update 1 \
+                    -vf "scale=${THUMBNAIL_SIZE}:${THUMBNAIL_SIZE}:force_original_aspect_ratio=decrease" \
+                    "$out" >/dev/null 2>&1 || \
+                # Fallback: try without seeking if first attempt fails
+                timeout 10s ffmpeg -y -hwaccel auto -i "$abs_path" -vframes 1 -update 1 \
+                    -vf "scale=${THUMBNAIL_SIZE}:${THUMBNAIL_SIZE}:force_original_aspect_ratio=decrease" \
+                    "$out" >/dev/null 2>&1
+                
+                # Verify the output file was created successfully
+                if [ ! -f "$out" ] || [ ! -s "$out" ]; then
+                    echo "Warning: Failed to generate thumbnail for $abs_path" >&2
+                    return 1
+                fi
+            else
+                echo "Warning: ffmpeg not found, skipping video thumbnail for $abs_path" >&2
+                return 1
+            fi
+            ;;
+        *.gif)
+            # For GIFs, take the first frame
+            magick "$abs_path[0]" -resize "${THUMBNAIL_SIZE}x${THUMBNAIL_SIZE}" "$out"
+            ;;
+        *)
+            # Regular image files
+            magick "$abs_path" -resize "${THUMBNAIL_SIZE}x${THUMBNAIL_SIZE}" "$out"
+            ;;
+    esac
 }
 
 # Parse arguments
@@ -115,11 +147,12 @@ case "$MODE" in
             echo "Directory not found: $TARGET"
             exit 2
         fi
+        # Process files sequentially to avoid spawning too many ffmpeg processes
+        # which causes high memory usage, especially for video files
         for f in "$TARGET"/*; do
             [ -f "$f" ] || continue
-            generate_thumbnail "$f" &
+            generate_thumbnail "$f"
         done
-        wait
         ;;
     *)
         usage
