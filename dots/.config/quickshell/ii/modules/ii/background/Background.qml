@@ -213,11 +213,12 @@ Variants {
                     (wallpaperData.workspaceFirst !== undefined && wallpaperData.workspaceLast !== undefined)
                 property int chunkSize: usePerMonitorRange ? bgRoot.wallpaperLastWorkspace - bgRoot.wallpaperFirstWorkspace + 1 : 
                     Config?.options.bar.workspaces.shown ?? 10
+                // Use wallpaper's configured workspace range when in per-monitor mode, otherwise use dynamic range
                 property int lower: usePerMonitorRange ?
-                    Math.floor(bgRoot.wallpaperFirstWorkspace / chunkSize) * chunkSize :
+                    bgRoot.wallpaperFirstWorkspace :
                     Math.floor(bgRoot.firstWorkspaceId / chunkSize) * chunkSize
                 property int upper: usePerMonitorRange ?
-                    Math.ceil(bgRoot.wallpaperLastWorkspace / chunkSize) * chunkSize :
+                    bgRoot.wallpaperLastWorkspace :
                     Math.ceil(bgRoot.lastWorkspaceId / chunkSize) * chunkSize
                 property int range: upper - lower
                 property real valueX: {
