@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import qs.modules.common
+import qs.modules.common.utils
 import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.services
@@ -32,14 +33,8 @@ PanelWindow {
     property var action: RegionSelection.SnipAction.Copy
     property var selectionMode: RegionSelection.SelectionMode.RectCorners
     signal dismiss()
-    
-    property string saveScreenshotDir: Config.options.screenSnip.savePath !== ""
-                                       ? Config.options.screenSnip.savePath
-                                       : ""
 
     property string screenshotDir: Directories.screenshotTemp
-    property string imageSearchEngineBaseUrl: Config.options.search.imageSearch.imageSearchEngineBaseUrl
-    property string fileUploadApiEndpoint: "https://uguu.se/upload"
     property color overlayColor: "#88111111"
     property color brightText: Appearance.m3colors.darkmode ? Appearance.colors.colOnLayer0 : Appearance.colors.colLayer0
     property color brightSecondary: Appearance.m3colors.darkmode ? Appearance.colors.colSecondary : Appearance.colors.colOnSecondary
@@ -180,10 +175,12 @@ PanelWindow {
     property real regionX: Math.min(dragStartX, draggingX)
     property real regionY: Math.min(dragStartY, draggingY)
 
-    Process {
+    TempScreenshotProcess {
         id: screenshotProc
         running: true
-        command: ["bash", "-c", `mkdir -p '${StringUtils.shellSingleQuoteEscape(root.screenshotDir)}' && grim -o '${StringUtils.shellSingleQuoteEscape(root.screen.name)}' '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}'`]
+        screen: root.screen
+        screenshotDir: root.screenshotDir
+        screenshotPath: root.screenshotPath
         onExited: (exitCode, exitStatus) => {
             if (root.enableContentRegions) imageDetectionProcess.running = true;
             root.preparationDone = !checkRecordingProc.running;
@@ -226,6 +223,27 @@ PanelWindow {
                     root.windowRegions
                 );
             }
+        }
+    }
+
+    function getScreenshotAction() {
+        switch(root.action) {
+            case RegionSelection.SnipAction.Copy:
+                return ScreenshotAction.Action.Copy;
+            case RegionSelection.SnipAction.Edit:
+                return ScreenshotAction.Action.Edit;
+            case RegionSelection.SnipAction.Search:
+                return ScreenshotAction.Action.Search;
+            case RegionSelection.SnipAction.CharRecognition:
+                return ScreenshotAction.Action.CharRecognition;
+            case RegionSelection.SnipAction.Record:
+                return ScreenshotAction.Action.Record;
+            case RegionSelection.SnipAction.RecordWithSound:
+                return ScreenshotAction.Action.RecordWithSound;
+            default:
+                console.warn("[Region Selector] Unknown snip action, skipping snip.");
+                root.dismiss();
+                return;
         }
     }
 
