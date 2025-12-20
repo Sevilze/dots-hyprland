@@ -111,9 +111,9 @@ ApiStrategy {
                 return ({})
             }
 
-            // Handle API errors
+            // Error response handling
             if (dataJson.error) {
-                const errorMsg = `**API Error ${dataJson.error.code}**: ${dataJson.error.message}`;
+                const errorMsg = `**Error ${dataJson.error.code}**: ${dataJson.error.message}`;
                 message.rawContent += errorMsg;
                 message.content += errorMsg;
                 return { finished: true };

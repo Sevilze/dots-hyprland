@@ -89,13 +89,10 @@ Singleton {
         // Special
         property color shadow: ColorUtils.transparentize('#161616', 0.62)
         property color ambientShadow: ColorUtils.transparentize("#000000", 0.75)
-        property color bgPanelFooterBase: root.dark ? root.darkColors.bg0 : root.lightColors.bg0
-        property color bgPanelFooterBackground: ColorUtils.transparentize(root.dark ? root.darkColors.bg0 : root.lightColors.bg0, root.panelBackgroundTransparency)
-        property color bgPanelFooter: ColorUtils.transparentize(bgPanelFooterBackground, root.panelLayerTransparency)
-        property color bgPanelBodyBase: root.dark ? root.darkColors.bgPanelBody : root.lightColors.bgPanelBody
-        property color bgPanelBody: ColorUtils.solveOverlayColor(bgPanelFooterBackground,bgPanelBodyBase, 1 - root.panelLayerTransparency)
-        property color bgPanelSeparator: ColorUtils.solveOverlayColor(bgPanelBodyBase, root.dark ? root.darkColors.bgPanelSeparator : root.lightColors.bgPanelSeparator, 1 - root.panelBackgroundTransparency)
-        // Layer 0
+        property color bgPanelFooterBase: ColorUtils.transparentize(root.dark ? root.darkColors.bgPanelFooter : root.lightColors.bgPanelFooter, root.panelBackgroundTransparency)
+        property color bgPanelFooter: ColorUtils.transparentize(root.dark ? root.darkColors.bgPanelFooter : root.lightColors.bgPanelFooter, root.panelLayerTransparency)
+        property color bgPanelBody: ColorUtils.transparentize(root.dark ? root.darkColors.bgPanelBody : root.lightColors.bgPanelBody, root.panelLayerTransparency)
+        property color bgPanelSeparator: ColorUtils.transparentize(root.dark ? root.darkColors.bgPanelSeparator : root.lightColors.bgPanelSeparator, root.backgroundTransparency)
         property color bg0Base: root.dark ? root.darkColors.bg0 : root.lightColors.bg0
         property color bg0: ColorUtils.transparentize(bg0Base, root.backgroundTransparency)
         property color bg0Border: ColorUtils.transparentize(root.dark ? root.darkColors.bg0Border : root.lightColors.bg0Border, root.backgroundTransparency)
