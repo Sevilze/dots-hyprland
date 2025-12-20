@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import qs.modules.common
 import qs.modules.common.utils
+import qs.modules.common.utils
 import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.services
@@ -35,7 +36,7 @@ PanelWindow {
     signal dismiss()
 
     property string screenshotDir: Directories.screenshotTemp
-    property color overlayColor: ColorUtils.transparentize("#000000", 0.4)
+    property color overlayColor: "#88111111"
     property color brightText: Appearance.m3colors.darkmode ? Appearance.colors.colOnLayer0 : Appearance.colors.colLayer0
     property color brightSecondary: Appearance.m3colors.darkmode ? Appearance.colors.colSecondary : Appearance.colors.colOnSecondary
     property color brightTertiary: Appearance.m3colors.darkmode ? Appearance.colors.colTertiary : Qt.lighter(Appearance.colors.colPrimary)
@@ -176,8 +177,12 @@ PanelWindow {
     property real regionY: Math.min(dragStartY, draggingY)
 
     TempScreenshotProcess {
+    TempScreenshotProcess {
         id: screenshotProc
         running: true
+        screen: root.screen
+        screenshotDir: root.screenshotDir
+        screenshotPath: root.screenshotPath
         screen: root.screen
         screenshotDir: root.screenshotDir
         screenshotPath: root.screenshotPath
@@ -223,6 +228,27 @@ PanelWindow {
                     root.windowRegions
                 );
             }
+        }
+    }
+
+    function getScreenshotAction() {
+        switch(root.action) {
+            case RegionSelection.SnipAction.Copy:
+                return ScreenshotAction.Action.Copy;
+            case RegionSelection.SnipAction.Edit:
+                return ScreenshotAction.Action.Edit;
+            case RegionSelection.SnipAction.Search:
+                return ScreenshotAction.Action.Search;
+            case RegionSelection.SnipAction.CharRecognition:
+                return ScreenshotAction.Action.CharRecognition;
+            case RegionSelection.SnipAction.Record:
+                return ScreenshotAction.Action.Record;
+            case RegionSelection.SnipAction.RecordWithSound:
+                return ScreenshotAction.Action.RecordWithSound;
+            default:
+                console.warn("[Region Selector] Unknown snip action, skipping snip.");
+                root.dismiss();
+                return;
         }
     }
 
