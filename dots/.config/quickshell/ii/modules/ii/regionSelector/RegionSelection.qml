@@ -36,6 +36,8 @@ PanelWindow {
     signal dismiss()
 
     property string screenshotDir: Directories.screenshotTemp
+    property string imageSearchEngineBaseUrl: Config.options.search.imageSearch.imageSearchEngineBaseUrl
+    property string fileUploadApiEndpoint: "https://uguu.se/upload"
     property color overlayColor: "#88111111"
     property color brightText: Appearance.m3colors.darkmode ? Appearance.colors.colOnLayer0 : Appearance.colors.colLayer0
     property color brightSecondary: Appearance.m3colors.darkmode ? Appearance.colors.colSecondary : Appearance.colors.colOnSecondary
