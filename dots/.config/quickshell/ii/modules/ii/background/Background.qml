@@ -44,10 +44,6 @@ Variants {
         property bool hasPerMonitorWallpaper: WallpaperListener.effectivePerMonitor[monitor.name] !== undefined
         property int wallpaperFirstWorkspace: hasPerMonitorWallpaper ? (wallpaperData.workspaceFirst ?? 1) : 1
         property int wallpaperLastWorkspace: hasPerMonitorWallpaper ? (wallpaperData.workspaceLast ?? 10) : 10
-        property var wallpaperData: WallpaperListener.effectivePerMonitor[monitor.name] || { path: Config.options.background.wallpaperPath, workspaceFirst: 1, workspaceLast: 10 }
-        property string resolvedPath: wallpaperData.path || Config.options.background.wallpaperPath
-        property int wallpaperFirstWorkspace: wallpaperData.workspaceFirst || 1
-        property int wallpaperLastWorkspace: wallpaperData.workspaceLast || 10
         property bool wallpaperIsVideo: resolvedPath.endsWith(".mp4") || resolvedPath.endsWith(".webm") || resolvedPath.endsWith(".mkv") || resolvedPath.endsWith(".avi") || resolvedPath.endsWith(".mov")
         // Get per-monitor thumbnail if available, otherwise use global thumbnail
         property string thumbnailPath: {
