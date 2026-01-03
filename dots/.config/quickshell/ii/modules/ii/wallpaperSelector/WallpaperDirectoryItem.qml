@@ -72,9 +72,8 @@ MouseArea {
                         Connections {
                             target: Wallpapers
                             function onThumbnailGenerated(directory) {
-                                // Reload thumbnail if it's not already loaded successfully
-                                if (thumbnailImage.status === Image.Ready) return;
-                                if (FileUtils.parentDirectory(thumbnailImage.sourcePath) !== directory) return;
+                                if (thumbnailImage.status !== Image.Error) return;
+                                if (FileUtils.parentDirectory(thumbnailImage.sourcePath) !== FileUtils.trimFileProtocol(directory)) return;
                                 thumbnailImage.source = "";
                                 thumbnailImage.source = thumbnailImage.thumbnailPath;
                             }
