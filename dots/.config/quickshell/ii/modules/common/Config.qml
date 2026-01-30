@@ -79,6 +79,7 @@ Singleton {
             id: configOptionsJsonAdapter
 
             property string panelFamily: "ii" // "ii", "waffle"
+            property string panelFamily: "ii" // "ii", "waffle"
 
             property JsonObject policies: JsonObject {
                 property int ai: 1 // 0: No | 1: Yes | 2: Local
@@ -136,6 +137,7 @@ Singleton {
                 property JsonObject palette: JsonObject {
                     property string type: "auto" // Allowed: auto, scheme-content, scheme-expressive, scheme-fidelity, scheme-fruit-salad, scheme-monochrome, scheme-neutral, scheme-rainbow, scheme-tonal-spot
                     property string accentColor: ""
+                    property string accentColor: ""
                 }
             }
 
@@ -188,7 +190,17 @@ Singleton {
                         property JsonObject digital: JsonObject {
                             property bool adaptiveAlignment: true
                             property bool showDate: true
+                            property bool adaptiveAlignment: true
+                            property bool showDate: true
                             property bool animateChange: true
+                            property bool vertical: false
+                            property JsonObject font: JsonObject {
+                                property string family: "Google Sans Flex"
+                                property real weight: 350
+                                property real width: 100
+                                property real size: 90
+                                property real roundness: 0
+                            }
                             property bool vertical: false
                             property JsonObject font: JsonObject {
                                 property string family: "Google Sans Flex"
@@ -226,6 +238,10 @@ Singleton {
                 }
                 property list<var> wallpapersByMonitor: []
                 property list<var> thumbnailsByMonitor: []
+                property JsonObject multiMonitor: JsonObject {
+                    property bool enable: false
+                }
+                property list<var> wallpapersByMonitor: []
             }
 
             property JsonObject bar: JsonObject {

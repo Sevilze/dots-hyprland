@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 import qs.modules.common
 import qs.modules.common.utils
-import qs.modules.common.utils
 import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.services
@@ -36,9 +35,7 @@ PanelWindow {
     signal dismiss()
 
     property string screenshotDir: Directories.screenshotTemp
-    property string imageSearchEngineBaseUrl: Config.options.search.imageSearch.imageSearchEngineBaseUrl
-    property string fileUploadApiEndpoint: "https://uguu.se/upload"
-    property color overlayColor: "#88111111"
+    property color overlayColor: ColorUtils.transparentize("#000000", 0.4)
     property color brightText: Appearance.m3colors.darkmode ? Appearance.colors.colOnLayer0 : Appearance.colors.colLayer0
     property color brightSecondary: Appearance.m3colors.darkmode ? Appearance.colors.colSecondary : Appearance.colors.colOnSecondary
     property color brightTertiary: Appearance.m3colors.darkmode ? Appearance.colors.colTertiary : Qt.lighter(Appearance.colors.colPrimary)
@@ -179,12 +176,8 @@ PanelWindow {
     property real regionY: Math.min(dragStartY, draggingY)
 
     TempScreenshotProcess {
-    TempScreenshotProcess {
         id: screenshotProc
         running: true
-        screen: root.screen
-        screenshotDir: root.screenshotDir
-        screenshotPath: root.screenshotPath
         screen: root.screen
         screenshotDir: root.screenshotDir
         screenshotPath: root.screenshotPath
@@ -254,27 +247,6 @@ PanelWindow {
         }
     }
 
-    function getScreenshotAction() {
-        switch(root.action) {
-            case RegionSelection.SnipAction.Copy:
-                return ScreenshotAction.Action.Copy;
-            case RegionSelection.SnipAction.Edit:
-                return ScreenshotAction.Action.Edit;
-            case RegionSelection.SnipAction.Search:
-                return ScreenshotAction.Action.Search;
-            case RegionSelection.SnipAction.CharRecognition:
-                return ScreenshotAction.Action.CharRecognition;
-            case RegionSelection.SnipAction.Record:
-                return ScreenshotAction.Action.Record;
-            case RegionSelection.SnipAction.RecordWithSound:
-                return ScreenshotAction.Action.RecordWithSound;
-            default:
-                console.warn("[Region Selector] Unknown snip action, skipping snip.");
-                root.dismiss();
-                return;
-        }
-    }
-
     function snip() {
         // Validity check
         if (root.regionWidth <= 0 || root.regionHeight <= 0) {
@@ -292,74 +264,20 @@ PanelWindow {
         if (root.action === RegionSelection.SnipAction.Copy || root.action === RegionSelection.SnipAction.Edit) {
             root.action = root.mouseButton === Qt.RightButton ? RegionSelection.SnipAction.Edit : RegionSelection.SnipAction.Copy;
         }
-
-        // Set command for action
-        const rx = Math.round(root.regionX * root.monitorScale);
-        const ry = Math.round(root.regionY * root.monitorScale);
-        const rw = Math.round(root.regionWidth * root.monitorScale);
-        const rh = Math.round(root.regionHeight * root.monitorScale);
-        const cropBase = `magick ${StringUtils.shellSingleQuoteEscape(root.screenshotPath)} `
-            + `-crop ${rw}x${rh}+${rx}+${ry}`
-        const cropToStdout = `${cropBase} -`
-        const cropInPlace = `${cropBase} '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}'`
-        const cleanup = `rm '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}'`
-        const slurpRegion = `${rx},${ry} ${rw}x${rh}`
-        const uploadAndGetUrl = (filePath) => {
-            return `curl -sF files[]=@'${StringUtils.shellSingleQuoteEscape(filePath)}' ${root.fileUploadApiEndpoint} | jq -r '.files[0].url'`
-        }
-        const annotationCommand = `${Config.options.regionSelector.annotation.useSatty ? "satty" : "swappy"} -f -`;
-        switch (root.action) {
-            case RegionSelection.SnipAction.Copy:
-                if (saveScreenshotDir === "") {
-                    // not saving the screenshot, just copy to clipboard
-                    snipProc.command = ["bash", "-c", `${cropToStdout} | wl-copy && ${cleanup}`]
-                    break;
-                }
-
-                const savePathBase = root.saveScreenshotDir
-
-                snipProc.command = [
-                    "bash", "-c",
-                    `mkdir -p '${StringUtils.shellSingleQuoteEscape(savePathBase)}' && \
-                    saveFileName="screenshot-$(date '+%Y-%m-%d_%H.%M.%S').png" && \
-                    savePath="${savePathBase}/$saveFileName" && \
-                    ${cropToStdout} | tee >(wl-copy) > "$savePath" && \
-                    ${cleanup}`
-                ]
-
-                break;
-            case RegionSelection.SnipAction.Edit:
-                if (saveScreenshotDir === "") {
-                    snipProc.command = ["bash", "-c", `${cropToStdout} | swappy -f - && ${cleanup}`]
-                } else {
-                    const editSavePathBase = root.saveScreenshotDir
-                    snipProc.command = [
-                        "bash", "-c",
-                        `mkdir -p '${StringUtils.shellSingleQuoteEscape(editSavePathBase)}' && \
-                        saveFileName="screenshot-$(date '+%Y-%m-%d_%H.%M.%S').png" && \
-                        savePath="${editSavePathBase}/$saveFileName" && \
-                        ${cropToStdout} | tee >(cat > "$savePath") | swappy -f - && \
-                        ${cleanup}`
-                    ]
-                }
-                break;
-            case RegionSelection.SnipAction.Search:
-                snipProc.command = ["bash", "-c", `${cropInPlace} && xdg-open "${root.imageSearchEngineBaseUrl}$(${uploadAndGetUrl(root.screenshotPath)})" && ${cleanup}`]
-                break;
-            case RegionSelection.SnipAction.CharRecognition:
-                snipProc.command = ["bash", "-c", `${cropInPlace} && tesseract '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' stdout -l $(tesseract --list-langs | awk 'NR>1{print $1}' | tr '\\n' '+' | sed 's/\\+$/\\n/') | wl-copy && ${cleanup}`]
-                break;
-            case RegionSelection.SnipAction.Record:
-                snipProc.command = ["bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}'`]
-                break;
-            case RegionSelection.SnipAction.RecordWithSound:
-                snipProc.command = ["bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}' --sound`]
-                break;
-            default:
-                console.warn("[Region Selector] Unknown snip action, skipping snip.");
-                root.dismiss();
-                return;
-        }
+        
+        const screenshotDir = Config.options.screenSnip.savePath !== "" ? //
+            Config.options.screenSnip.savePath : "";
+        var screenshotAction = root.getScreenshotAction();
+        const command = ScreenshotAction.getCommand(
+            root.regionX * root.monitorScale, //
+            root.regionY * root.monitorScale, //
+            root.regionWidth * root.monitorScale,// 
+            root.regionHeight * root.monitorScale, //
+            root.screenshotPath, //
+            screenshotAction, //
+            screenshotDir
+        )
+        snipProc.command = command;
 
         // Image post-processing
         snipProc.startDetached();
