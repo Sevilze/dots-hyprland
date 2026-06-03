@@ -15,7 +15,7 @@ install-yay(){
 remove_deprecated_dependencies(){
   printf "${STY_CYAN}[$0]: Removing deprecated dependencies:${STY_RST}\n"
   local list=()
-  list+=(illogical-impulse-{microtex,pymyc-aur})
+  list+=(illogical-impulse-{microtex,pymyc-aur,oneui4-icons-git})
   list+=(hyprland-qtutils)
   list+=({quickshell,hyprutils,hyprpicker,hyprlang,hypridle,hyprland-qt-support,hyprland-qtutils,hyprlock,xdg-desktop-portal-hyprland,hyprcursor,hyprwayland-scanner,hyprland}-git)
   list+=(matugen-bin)
@@ -54,7 +54,7 @@ v remove_deprecated_dependencies
 
 # Issue #363
 case $SKIP_SYSUPDATE in
-  true) sleep 0;;
+  true) true;;
   *) v sudo pacman -Syu;;
 esac
 
@@ -94,9 +94,7 @@ metapkgs=(./sdata/dist-arch/illogical-impulse-{audio,backlight,basic,fonts-theme
 metapkgs+=(./sdata/dist-arch/illogical-impulse-hyprland)
 metapkgs+=(./sdata/dist-arch/illogical-impulse-microtex-git)
 metapkgs+=(./sdata/dist-arch/illogical-impulse-quickshell-git)
-# metapkgs+=(./sdata/dist-arch/packages/illogical-impulse-oneui4-icons-git)
-[[ -f /usr/share/icons/Bibata-Modern-Classic/index.theme ]] || \
-  metapkgs+=(./sdata/dist-arch/illogical-impulse-bibata-modern-classic-bin)
+metapkgs+=(./sdata/dist-arch/illogical-impulse-bibata-modern-classic-bin)
 
 for i in "${metapkgs[@]}"; do
   metainstallflags="--needed"
@@ -107,7 +105,7 @@ done
 ## Optional dependencies
 if pacman -Qs ^plasma-browser-integration$ ;then SKIP_PLASMAINTG=true;fi
 case $SKIP_PLASMAINTG in
-  true) sleep 0;;
+  true) true;;
   *)
     if $ask;then
       echo -e "${STY_YELLOW}[$0]: NOTE: The size of \"plasma-browser-integration\" is ~600 KiB, but if you don't yet have KDE on your system it'll pull an extra ~600MiB of packages.${STY_RST}"

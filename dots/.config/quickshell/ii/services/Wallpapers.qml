@@ -36,16 +36,11 @@ Singleton {
     signal thumbnailGeneratedFile(filePath: string)
 
     function load () {} // For forcing initialization
-
-    // Executions
-    Process {
-        id: applyProc
-    }
-
+    
     function openFallbackPicker(darkMode = Appearance.m3colors.darkmode) {
         const args = [
             Directories.wallpaperSwitchScriptPath,
-            "--mode", (darkMode ? "dark" : "light")
+            "--mode", darkMode ? "dark" : "light"
         ]
 
         if (Config.options.background?.multiMonitor?.enable) {
@@ -55,7 +50,7 @@ Singleton {
             }
         }
 
-        applyProc.exec(args)
+        Quickshell.execDetached(args)
     }
 
     function apply(path, darkMode = Appearance.m3colors.darkmode, monitorName = "") {
@@ -63,12 +58,12 @@ Singleton {
         const args = [
             Directories.wallpaperSwitchScriptPath,
             "--image", path,
-            "--mode", (darkMode ? "dark" : "light")
+            "--mode", darkMode ? "dark" : "light"
         ]
         if (monitorName !== "") {
             args.push("--monitor", monitorName)
         }
-        applyProc.exec(args)
+        Quickshell.execDetached(args)
         root.changed()
     }
 
