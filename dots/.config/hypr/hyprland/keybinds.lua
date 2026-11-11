@@ -9,10 +9,10 @@ local hyprScripts = "$HOME/.config/hypr/hyprland/scripts"
 local qsIpcCall = "qs -c $qsConfig ipc call"
 local qsIsAlive = qsIpcCall .. " TEST_ALIVE"
 
-hl.bind("SUPER + SUPER_L", hl.dsp.global("quickshell:searchToggleRelease"), { description = "Shell: Toggle search" })
-hl.bind("SUPER + SUPER_R", hl.dsp.global("quickshell:searchToggleRelease"))
-hl.bind("SUPER + SUPER_L", hl.dsp.exec_cmd(qsIsAlive .. " || pkill fuzzel || fuzzel"))
-hl.bind("SUPER + SUPER_R", hl.dsp.exec_cmd(qsIsAlive .. " || pkill fuzzel || fuzzel"))
+local searchToggle = hl.dsp.exec_cmd(qsIpcCall .. " search toggle || pkill fuzzel || fuzzel")
+hl.bind("SUPER + SUPER_L", searchToggle,
+    { release = true, description = "Shell: Toggle search" })
+hl.bind("SUPER + SUPER_R", searchToggle, { release = true })
 
 hl.bind("SUPER_L", hl.dsp.global("quickshell:workspaceNumber"), { ignore_mods = true, transparent = true })
 hl.bind("SUPER_R", hl.dsp.global("quickshell:workspaceNumber"), { ignore_mods = true, transparent = true })
@@ -202,12 +202,12 @@ for i = 1, 10 do
     end, { description = "Window: Send to workspace " .. i })
 end
 --# We also use raw keycodes because some keyboard layouts register number keys as different chars. The codes can be verified with `wev`
-for i = 1, 10 do
-    local numberkey = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 }
-    hl.bind("SUPER + ALT + code:" .. numberkey[i], function()
-        hl.dispatch(hl.dsp.window.move({ workspace = workspace_in_group(i), follow = false }))
-    end)
-end
+-- for i = 1, 10 do
+--     local numberkey = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 }
+--     hl.bind("SUPER + ALT + code:" .. numberkey[i], function()
+--         hl.dispatch(hl.dsp.window.move({ workspace = workspace_in_group(i), follow = false }))
+--     end)
+-- end
 --# keypad numbers
 for i = 1, 10 do
     local numpadkey = { 87, 88, 89, 83, 84, 85, 79, 80, 81, 90 }
@@ -219,7 +219,7 @@ end
 --# #/# bind = SUPER+SHIFT, Scroll ↑/↓,, -- Send to workspace left/right
 for i = 1, 4 do
     local key = { "SUPER + SHIFT + mouse_", "SUPER + ALT + mouse_" }
-    local keycombos = { key[1] .. "down", key[1] .. "up", key[2] .. "down", key[2] .. "up" }
+    local keycombos = { key[1] .. "up", key[1] .. "down", key[2] .. "up", key[2] .. "down" }
     local prefix = { "r-", "r+", "r-", "r+" }
     hl.bind(keycombos[i], hl.dsp.window.move({ workspace = prefix[i] .. "1" }))
 end
@@ -287,7 +287,7 @@ for i = 1, 4 do
 end
 --#/# bind = SUPER, Scroll ↑/↓,, -- Focus left/right
 for i = 1, 4 do
-    local key = { "SUPER + mouse_up", "SUPER + mouse_down" }
+    local key = { "SUPER + mouse_down", "SUPER + mouse_up" }
     local keycombos = { key[1], key[2], "CTRL + " .. key[1], "CTRL + " .. key[2] }
     local prefix = { "+", "-", "r+", "r-" }
     hl.bind(keycombos[i], hl.dsp.focus({ workspace = prefix[i] .. "1" }))
